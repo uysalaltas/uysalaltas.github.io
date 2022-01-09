@@ -1,0 +1,2 @@
+I"‘<p>The easiest way to add a nice look or functionality to your application developed with OpenGL is to use a GUI library. In this way, you will have tools that can be used while developing applications such as buttons, text fields or color picker. In this article, I talked about how the window created with OpenGL is rendered within the ImGUI window and how the window is scaled after rendering.</p>
+:ET
