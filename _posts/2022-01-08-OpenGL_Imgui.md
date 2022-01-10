@@ -2,14 +2,14 @@
 layout: post
 title: "Render an OpenGL scene in ImGui window"
 subtitle: "This post trying to explain how to render OpenGL window in ImGui viewport"
-date: 2022-01-08 00:00:00 -0400
-background: '/img/posts/01.jpg'
+date: 2022-01-09 00:00:00 -0400
+background: '/img/posts/OpenGL_Imgui/pexels1.jpg'
 ---
 
 The easiest way to add a nice look or functionality to your application developed with OpenGL is to use a GUI library. In this way, you will have tools that can be used while developing applications such as buttons, text fields or color picker. In this article, I talked about how the window created with OpenGL is rendered within the ImGUI window and how the window is scaled after rendering.
 
 ## Creating a framebuffer
-We need to create a copy of the scene created with OpenGL and keep this copy in a buffer. At this stage, the framebuffer comes to our aid. You can find a more detailed article about Framebuffer at [learnopengl.com]({% link https://learnopengl.com/Advanced-OpenGL/Framebuffers %}). After creating framebuffer we have to attach to a texture for using it. 
+We need to create a copy of the scene created with OpenGL and keep this copy in a buffer. At this stage, the framebuffer comes to our aid. You can find a more detailed article about Framebuffer at <a href="https://learnopengl.com/Advanced-OpenGL/Framebuffers">learnopengl.com</a>. After creating framebuffer we have to attach to a texture for using it. 
 
 Lets create our framebuffer and bind it. 
 
@@ -172,7 +172,7 @@ return 0;
 ```
 
 ## Rendering On ImGUI Window
-After handling all framebuffer stuff now we can transfer our image to imgui window. Assuming that the ImGui is currently working on the application, So i am only sharing the codes of the part where the image is transferred to the screen. If you dont know how to use ImGui with OpenGL, The Cherno has great tutorial about that. Definetely go [check that out]({% link https://www.youtube.com/watch?v=nVaQuNXueFw %}).
+After handling all framebuffer stuff now we can transfer our image to imgui window. Assuming that the ImGui is currently working on the application, So i am only sharing the codes of the part where the image is transferred to the screen. If you dont know how to use ImGui with OpenGL, The Cherno has great tutorial about that. Definetely go <a href="https://www.youtube.com/watch?v=nVaQuNXueFw">check that out</a>.
 
 ```c++
 
@@ -228,6 +228,6 @@ void GLWindow::window_size_callback(GLFWwindow* window, int width, int height)
 
 Here is the result! We have fully scalable window.
 
-<div style="width:100%;height:0;padding-bottom:54%;position:relative;"><iframe src="https://giphy.com/embed/kigzokOzM3PDnFl6Y2" width="100%" height="100%" style="position:absolute" frameBorder="0" class="giphy-embed" allowFullScreen></iframe></div><p><a href="https://giphy.com/gifs/resizing-window-kigzokOzM3PDnFl6Y2">via GIPHY</a></p>
+![Scene Gif](/img/posts/OpenGL_Imgui/Scene Gif.gif)
 
 I hope it helps. If you have any issues or question dont hesitate to contact with me.
