@@ -1,0 +1,2 @@
+I")<p>In general, bounding box techniques such as AABB are used to provide collision detection in 3D environments. Although the implementation and calculation time of these algorithms are fast, their sensitivity is not sufficient in applications where each triangle is important. If you want to cover details about you should visit <a href="https://developer.mozilla.org/en-US/docs/Games/Techniques/3D_collision_detection">this article</a>. This article will show a simple implementation on OpenGL based on the intersection between triangle and point.</p>
+:ET
