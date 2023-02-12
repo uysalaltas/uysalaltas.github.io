@@ -1,0 +1,245 @@
+I"�<p><a href="https://www.pexels.com/photo/close-up-photo-of-camera-shutter-414781/">Photo by Pixabay</a></p>
+
+<p>An arcball camera, also known as a spherical camera, is a type of 3D camera control that allows the user to interactively manipulate the position and orientation of a virtual camera in 3D space. The arcball camera is often used in 3D graphics and game development, as it provides an intuitive and user-friendly way for the user to navigate and view a 3D scene. The user can rotate the camera around the scene, zoom in and out, and change the camera’s perspective by rotating it in any direction. We frequently come across Arcball camera in slicing programs used for 3D modeling and animation, Virtual reality and augmented reality applications, Industrial design and product visualization and 3D printers. In general, we use it when the user wants to view the object from more than one angle.</p>
+
+<p>There are various methods for calculating an arcball camera. The two methods that are most frequently used to calculate arcball cameras are quaternions and euler angles. Of course, each strategy has advantages and disadvantages. I am not going to deep into mathematics behind those approaches but simply Euler angles are a set of three angles, representing the rotation about the X, Y, and Z axes, respectively. In the context of an arcball camera, Euler angles can be used to describe the orientation of the camera by specifying the rotation about the X, Y, and Z axes of the camera’s reference frame. Euler angles are easy to understand and simple to implement, but they have the drawback of being prone to gimbal lock, which is when two or more of the angles become degenerate and the orientation becomes ambiguous. Quaternions, on the other hand, are a mathematical representation of rotations that can be used to describe the orientation of the camera. Unlike Euler angles, quaternions do not suffer from gimbal lock and can represent any orientation in three-dimensional space. In the context of an arcball camera, quaternions can be used to describe the orientation of the camera by specifying the axis of rotation and the angle of rotation. Quaternions are more complex to understand and implement than Euler angles, but they provide a more robust representation of rotations.</p>
+
+<p>We are gonna use euler angles in this article.</p>
+
+<h2 id="calculation-of-arcball-camera">Calculation of Arcball camera</h2>
+<p>Fist we need to get differences between mouse positions when we press a mouse click. Doing something like this is easy with the code that down below.</p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">if</span> <span class="p">(</span><span class="n">Input</span><span class="o">::</span><span class="n">IsMouseButtonPressed</span><span class="p">(</span><span class="n">TEA_MOUSE_LEFT</span><span class="p">))</span>
+<span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">firstMouseClick</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">lastMousePosRightClick</span><span class="p">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">Input</span><span class="o">::</span><span class="n">GetMouseX</span><span class="p">();</span>
+        <span class="n">lastMousePosRightClick</span><span class="p">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">Input</span><span class="o">::</span><span class="n">GetMouseY</span><span class="p">();</span>
+        <span class="n">firstMouseClick</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="n">ArcBallCamera</span><span class="p">((</span><span class="n">lastMousePosRightClick</span><span class="p">.</span><span class="n">x</span> <span class="o">-</span> <span class="n">Input</span><span class="o">::</span><span class="n">GetMouseX</span><span class="p">()),</span> <span class="p">(</span><span class="n">lastMousePosRightClick</span><span class="p">.</span><span class="n">y</span> <span class="o">-</span> <span class="n">Input</span><span class="o">::</span><span class="n">GetMouseY</span><span class="p">()));</span>
+    <span class="n">lastMousePosRightClick</span><span class="p">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">Input</span><span class="o">::</span><span class="n">GetMouseX</span><span class="p">();</span>
+    <span class="n">lastMousePosRightClick</span><span class="p">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">Input</span><span class="o">::</span><span class="n">GetMouseY</span><span class="p">();</span>
+<span class="p">}</span>
+<span class="k">else</span>
+<span class="p">{</span>
+    <span class="n">firstMouseClick</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+<p>At this stage, I use my own functions to obtain mouse clicks and positions. But you can simply use GLFW or different library events and functions. After calculating deltaX and deltaY mouse positions we can calculate arcball rotation now.</p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">void</span> <span class="nf">ArcBallCamera</span><span class="p">(</span><span class="kt">float</span> <span class="n">deltaX</span><span class="p">,</span> <span class="kt">float</span> <span class="n">deltaY</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">glm</span><span class="o">::</span><span class="n">vec4</span> <span class="n">position</span><span class="p">(</span><span class="n">GetEye</span><span class="p">().</span><span class="n">x</span><span class="p">,</span> <span class="n">GetEye</span><span class="p">().</span><span class="n">y</span><span class="p">,</span> <span class="n">GetEye</span><span class="p">().</span><span class="n">z</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+    <span class="n">glm</span><span class="o">::</span><span class="n">vec4</span> <span class="n">pivot</span><span class="p">(</span><span class="n">GetLookAt</span><span class="p">().</span><span class="n">x</span><span class="p">,</span> <span class="n">GetLookAt</span><span class="p">().</span><span class="n">y</span><span class="p">,</span> <span class="n">GetLookAt</span><span class="p">().</span><span class="n">z</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+    <span class="kt">float</span> <span class="n">deltaAngleX</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">M_PI</span> <span class="o">/</span> <span class="o">*</span><span class="n">m_width</span><span class="p">);</span>
+    <span class="kt">float</span> <span class="n">deltaAngleY</span> <span class="o">=</span> <span class="p">(</span><span class="n">M_PI</span> <span class="o">/</span> <span class="o">*</span><span class="n">m_height</span><span class="p">);</span>
+    <span class="kt">float</span> <span class="n">xAngle</span> <span class="o">=</span> <span class="n">deltaX</span> <span class="o">*</span> <span class="n">deltaAngleX</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">yAngle</span> <span class="o">=</span> <span class="n">deltaY</span> <span class="o">*</span> <span class="n">deltaAngleY</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">cosAngle</span> <span class="o">=</span> <span class="n">glm</span><span class="o">::</span><span class="n">dot</span><span class="p">(</span><span class="n">GetViewDir</span><span class="p">(),</span> <span class="n">m_upVector</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">cosAngle</span> <span class="o">*</span> <span class="n">glm</span><span class="o">::</span><span class="n">sign</span><span class="p">(</span><span class="n">yAngle</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">0.99</span><span class="n">f</span><span class="p">)</span>
+        <span class="n">yAngle</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="n">glm</span><span class="o">::</span><span class="n">mat4x4</span> <span class="n">rotationMatrixX</span><span class="p">(</span><span class="mf">1.0</span><span class="n">f</span><span class="p">);</span>
+    <span class="n">rotationMatrixX</span> <span class="o">=</span> <span class="n">glm</span><span class="o">::</span><span class="n">rotate</span><span class="p">(</span><span class="n">rotationMatrixX</span><span class="p">,</span> <span class="n">xAngle</span><span class="p">,</span> <span class="n">m_upVector</span><span class="p">);</span>
+    <span class="n">position</span> <span class="o">=</span> <span class="p">(</span><span class="n">rotationMatrixX</span> <span class="o">*</span> <span class="p">(</span><span class="n">position</span> <span class="o">-</span> <span class="n">pivot</span><span class="p">))</span> <span class="o">+</span> <span class="n">pivot</span><span class="p">;</span>
+    <span class="n">glm</span><span class="o">::</span><span class="n">mat4x4</span> <span class="n">rotationMatrixY</span><span class="p">(</span><span class="mf">1.0</span><span class="n">f</span><span class="p">);</span>
+    <span class="n">rotationMatrixY</span> <span class="o">=</span> <span class="n">glm</span><span class="o">::</span><span class="n">rotate</span><span class="p">(</span><span class="n">rotationMatrixY</span><span class="p">,</span> <span class="n">yAngle</span><span class="p">,</span> <span class="n">GetRightVector</span><span class="p">());</span>
+    <span class="n">glm</span><span class="o">::</span><span class="n">vec3</span> <span class="n">finalPosition</span> <span class="o">=</span> <span class="p">(</span><span class="n">rotationMatrixY</span> <span class="o">*</span> <span class="p">(</span><span class="n">position</span> <span class="o">-</span> <span class="n">pivot</span><span class="p">))</span> <span class="o">+</span> <span class="n">pivot</span><span class="p">;</span>
+    <span class="n">SetCameraView</span><span class="p">(</span><span class="n">finalPosition</span><span class="p">,</span> <span class="n">GetLookAt</span><span class="p">(),</span> <span class="n">m_upVector</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+<p>The deltaX and deltaY values represent the change in mouse position. deltaAngleX and deltaAngleY are the angles of rotation corresponding to deltaX and deltaY, respectively, and they are calculated based on the width and height of the window. The “cosAngle” variable is the dot product of the view direction vector and the up vector, used to check if the camera is facing straight up or down, in which case the camera should not rotate vertically. This is a precaution for gimbal lock. The “rotationMatrixX” and “rotationMatrixY” matrices are created to store the rotation transformations. The “rotationMatrixX” is calculated as a rotation around the up vector with angle xAngle, while the “rotationMatrixY” is calculated as a rotation around the right vector with angle yAngle. The position of the camera is then transformed by the “rotationMatrixX” and “rotationMatrixY” matrices and the result is stored in the “finalPosition” variable. Finally, the SetCameraView function is called with the “finalPosition”, the look-at position, and the up vector to update the camera view. As you see GLM functions used for all the calculations.</p>
+
+<h2 id="calculation-of-camera-panning">Calculation of Camera Panning</h2>
+<p>In many sceniario, we may want to change our look up positions. In this point we can use camera panning. Camera panning must proportional with direction of the camera for more intuitive movement. Panning a camera involves changing both the position of the camera and the position that the camera is looking at. When you pan the camera, you’re essentially shifting its position in the right and up directions. This means that the camera position changes, but the direction the camera is pointing (the “look-at” position) remains unchanged. As a result, you need to update both the camera position and the view matrix, which defines the camera’s orientation and perspective in the 3D scene. Let’s code now.</p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">void</span> <span class="nf">CalculatePanCamera</span><span class="p">()</span>
+<span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">Input</span><span class="o">::</span><span class="n">IsMouseButtonPressed</span><span class="p">(</span><span class="n">TEA_MOUSE_RIGHT</span><span class="p">))</span>
+    <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">firstRightMouseClick</span><span class="p">)</span>
+        <span class="p">{</span>
+            <span class="n">lastMousePosRightClick</span><span class="p">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">Input</span><span class="o">::</span><span class="n">GetMouseX</span><span class="p">();</span>
+            <span class="n">lastMousePosRightClick</span><span class="p">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">Input</span><span class="o">::</span><span class="n">GetMouseY</span><span class="p">();</span>
+            <span class="n">firstRightMouseClick</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="n">PanCamera</span><span class="p">((</span><span class="n">Input</span><span class="o">::</span><span class="n">GetMouseX</span><span class="p">()</span> <span class="o">-</span> <span class="n">lastMousePosRightClick</span><span class="p">.</span><span class="n">x</span><span class="p">),</span> <span class="p">(</span><span class="n">lastMousePosRightClick</span><span class="p">.</span><span class="n">y</span> <span class="o">-</span> <span class="n">Input</span><span class="o">::</span><span class="n">GetMouseY</span><span class="p">()));</span>
+        <span class="n">lastMousePosRightClick</span><span class="p">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">Input</span><span class="o">::</span><span class="n">GetMouseX</span><span class="p">();</span>
+        <span class="n">lastMousePosRightClick</span><span class="p">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">Input</span><span class="o">::</span><span class="n">GetMouseY</span><span class="p">();</span>
+    <span class="p">}</span>
+    <span class="k">else</span>
+    <span class="p">{</span>
+        <span class="n">firstRightMouseClick</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="nf">PanCamera</span><span class="p">(</span><span class="kt">float</span> <span class="n">deltaX</span><span class="p">,</span> <span class="kt">float</span> <span class="n">deltaY</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">deltaX</span> <span class="o">*=</span> <span class="mf">0.05</span><span class="n">f</span><span class="p">;</span>
+    <span class="n">deltaY</span> <span class="o">*=</span> <span class="mf">0.05</span><span class="n">f</span><span class="p">;</span>
+    <span class="n">glm</span><span class="o">::</span><span class="n">vec3</span> <span class="n">cameraFront</span> <span class="o">=</span> <span class="n">glm</span><span class="o">::</span><span class="n">normalize</span><span class="p">(</span><span class="n">m_lookAt</span> <span class="o">-</span> <span class="n">m_eye</span><span class="p">);</span>
+    <span class="n">glm</span><span class="o">::</span><span class="n">vec3</span> <span class="n">right</span> <span class="o">=</span> <span class="n">glm</span><span class="o">::</span><span class="n">normalize</span><span class="p">(</span><span class="n">glm</span><span class="o">::</span><span class="n">cross</span><span class="p">(</span><span class="n">cameraFront</span><span class="p">,</span> <span class="n">m_upVector</span><span class="p">));</span>
+    <span class="n">glm</span><span class="o">::</span><span class="n">vec3</span> <span class="n">up</span> <span class="o">=</span> <span class="n">glm</span><span class="o">::</span><span class="n">normalize</span><span class="p">(</span><span class="n">m_upVector</span><span class="p">);</span>
+    <span class="n">m_eye</span> <span class="o">-=</span> <span class="n">deltaX</span> <span class="o">*</span> <span class="n">right</span> <span class="o">+</span> <span class="n">deltaY</span> <span class="o">*</span> <span class="n">up</span><span class="p">;</span>
+    <span class="n">m_lookAt</span> <span class="o">-=</span> <span class="n">deltaX</span> <span class="o">*</span> <span class="n">right</span> <span class="o">+</span> <span class="n">deltaY</span> <span class="o">*</span> <span class="n">up</span>
+    <span class="n">UpdateViewMatrix</span><span class="p">();</span>
+<span class="p">}</span>
+</code></pre></div></div>
+<p>Again we need to get differences between mouse positions like calculation of arcball camera. We multiply the delta values for reducing the sensitivity. cameraFront is the front direction of the camera. It is the direction that the camera is facing, and is typically calculated as the normalized difference between the camera position and the look-at position. After that, we have to calculate right and up vectors. The right vector is calculated as the cross product of the front and up vectors. The up vector is normalized for consistency. The camera position and look-at position are then updated by subtracting the xoffset times the right vector and the yoffset times the up vector. This maintains the same relative position between the camera and the look-at position, while shifting both positions in the right and up directions. Finally we can update the view matrix.</p>
+
+<p>Here is whole camera.h file.</p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp"># define M_PI           3.14159265358979323846  </span><span class="cm">/* pi */</span><span class="cp">
+</span>
+<span class="k">class</span> <span class="nc">Camera</span>
+<span class="p">{</span>
+<span class="nl">public:</span>
+    <span class="n">Camera</span><span class="p">(</span><span class="n">glm</span><span class="o">::</span><span class="n">vec3</span><span class="o">&amp;</span> <span class="n">eye</span><span class="p">,</span> <span class="n">glm</span><span class="o">::</span><span class="n">vec3</span><span class="o">&amp;</span> <span class="n">lookat</span><span class="p">,</span> <span class="n">glm</span><span class="o">::</span><span class="n">vec3</span><span class="o">&amp;</span> <span class="n">upVector</span><span class="p">,</span> <span class="kt">int</span><span class="o">*</span> <span class="n">width</span><span class="p">,</span> <span class="kt">int</span><span class="o">*</span> <span class="n">height</span><span class="p">)</span>
+        <span class="o">:</span> <span class="n">m_eye</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">eye</span><span class="p">))</span>
+        <span class="p">,</span> <span class="n">m_lookAt</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">lookat</span><span class="p">))</span>
+        <span class="p">,</span> <span class="n">m_upVector</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">upVector</span><span class="p">))</span>
+        <span class="p">,</span> <span class="n">m_width</span><span class="p">(</span><span class="n">width</span><span class="p">)</span>
+        <span class="p">,</span> <span class="n">m_height</span><span class="p">(</span><span class="n">height</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">UpdateViewMatrix</span><span class="p">();</span>
+    <span class="p">}</span>
+    <span class="n">glm</span><span class="o">::</span><span class="n">mat4x4</span> <span class="n">GetViewMatrix</span><span class="p">()</span> <span class="k">const</span> <span class="p">{</span> <span class="k">return</span> <span class="n">m_viewMatrix</span><span class="p">;</span> <span class="p">}</span>
+    <span class="n">glm</span><span class="o">::</span><span class="n">mat4x4</span> <span class="n">GetProjMatrix</span><span class="p">()</span> <span class="k">const</span> <span class="p">{</span> <span class="k">return</span> <span class="n">m_projMatrix</span><span class="p">;</span> <span class="p">}</span>
+    <span class="n">glm</span><span class="o">::</span><span class="n">vec3</span> <span class="n">GetEye</span><span class="p">()</span> <span class="k">const</span> <span class="p">{</span> <span class="k">return</span> <span class="n">m_eye</span><span class="p">;</span> <span class="p">}</span>
+    <span class="n">glm</span><span class="o">::</span><span class="n">vec3</span> <span class="n">GetUpVector</span><span class="p">()</span> <span class="k">const</span> <span class="p">{</span> <span class="k">return</span> <span class="n">m_upVector</span><span class="p">;</span> <span class="p">}</span>
+    <span class="n">glm</span><span class="o">::</span><span class="n">vec3</span> <span class="n">GetLookAt</span><span class="p">()</span> <span class="k">const</span> <span class="p">{</span> <span class="k">return</span> <span class="n">m_lookAt</span><span class="p">;</span> <span class="p">}</span>
+    <span class="n">glm</span><span class="o">::</span><span class="n">vec3</span> <span class="n">GetViewDir</span><span class="p">()</span> <span class="k">const</span> <span class="p">{</span> <span class="k">return</span> <span class="o">-</span><span class="n">glm</span><span class="o">::</span><span class="n">transpose</span><span class="p">(</span><span class="n">m_viewMatrix</span><span class="p">)[</span><span class="mi">2</span><span class="p">];</span> <span class="p">}</span>
+    <span class="n">glm</span><span class="o">::</span><span class="n">vec3</span> <span class="n">GetRightVector</span><span class="p">()</span> <span class="k">const</span> <span class="p">{</span> <span class="k">return</span> <span class="n">glm</span><span class="o">::</span><span class="n">transpose</span><span class="p">(</span><span class="n">m_viewMatrix</span><span class="p">)[</span><span class="mi">0</span><span class="p">];</span> <span class="p">}</span>
+    <span class="kt">float</span> <span class="n">GetFOV</span><span class="p">()</span> <span class="k">const</span> <span class="p">{</span> <span class="k">return</span> <span class="n">m_fov</span><span class="p">;</span> <span class="p">}</span>
+    <span class="kt">void</span> <span class="n">CalculateArcballCamera</span><span class="p">()</span>
+    <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">Input</span><span class="o">::</span><span class="n">IsMouseButtonPressed</span><span class="p">(</span><span class="n">TEA_MOUSE_LEFT</span><span class="p">))</span>
+        <span class="p">{</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">firstMouseClick</span><span class="p">)</span>
+            <span class="p">{</span>
+                <span class="n">lastMousePosRightClick</span><span class="p">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">Input</span><span class="o">::</span><span class="n">GetMouseX</span><span class="p">();</span>
+                <span class="n">lastMousePosRightClick</span><span class="p">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">Input</span><span class="o">::</span><span class="n">GetMouseY</span><span class="p">();</span>
+                <span class="n">firstMouseClick</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+            <span class="p">}</span>
+            <span class="n">ArcBallCamera</span><span class="p">((</span><span class="n">lastMousePosRightClick</span><span class="p">.</span><span class="n">x</span> <span class="o">-</span> <span class="n">Input</span><span class="o">::</span><span class="n">GetMouseX</span><span class="p">()),</span> <span class="p">(</span><span class="n">lastMousePosRightClick</span><span class="p">.</span><span class="n">y</span> <span class="o">-</span> <span class="n">Input</span><span class="o">::</span><span class="n">GetMouseY</span><span class="p">()));</span>
+            <span class="n">lastMousePosRightClick</span><span class="p">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">Input</span><span class="o">::</span><span class="n">GetMouseX</span><span class="p">();</span>
+            <span class="n">lastMousePosRightClick</span><span class="p">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">Input</span><span class="o">::</span><span class="n">GetMouseY</span><span class="p">();</span>
+        <span class="p">}</span>
+        <span class="k">else</span>
+        <span class="p">{</span>
+            <span class="n">firstMouseClick</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="kt">void</span> <span class="n">CalculatePanCamera</span><span class="p">()</span>
+    <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">Input</span><span class="o">::</span><span class="n">IsMouseButtonPressed</span><span class="p">(</span><span class="n">TEA_MOUSE_RIGHT</span><span class="p">))</span>
+        <span class="p">{</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">firstRightMouseClick</span><span class="p">)</span>
+            <span class="p">{</span>
+                <span class="n">lastMousePosRightClick</span><span class="p">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">Input</span><span class="o">::</span><span class="n">GetMouseX</span><span class="p">();</span>
+                <span class="n">lastMousePosRightClick</span><span class="p">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">Input</span><span class="o">::</span><span class="n">GetMouseY</span><span class="p">();</span>
+                <span class="n">firstRightMouseClick</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+            <span class="p">}</span>
+            <span class="n">PanCamera</span><span class="p">((</span><span class="n">Input</span><span class="o">::</span><span class="n">GetMouseX</span><span class="p">()</span> <span class="o">-</span> <span class="n">lastMousePosRightClick</span><span class="p">.</span><span class="n">x</span><span class="p">),</span> <span class="p">(</span><span class="n">lastMousePosRightClick</span><span class="p">.</span><span class="n">y</span> <span class="o">-</span> <span class="n">Input</span><span class="o">::</span><span class="n">GetMouseY</span><span class="p">()));</span>
+            <span class="n">lastMousePosRightClick</span><span class="p">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">Input</span><span class="o">::</span><span class="n">GetMouseX</span><span class="p">();</span>
+            <span class="n">lastMousePosRightClick</span><span class="p">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">Input</span><span class="o">::</span><span class="n">GetMouseY</span><span class="p">();</span>
+        <span class="p">}</span>
+        <span class="k">else</span>
+        <span class="p">{</span>
+            <span class="n">firstRightMouseClick</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="kt">void</span> <span class="n">ZoomCamera</span><span class="p">()</span>
+    <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">Input</span><span class="o">::</span><span class="n">IsKeyPressed</span><span class="p">(</span><span class="n">TEA_KEY_W</span><span class="p">))</span>
+        <span class="p">{</span>
+            <span class="n">ProcessMouseScroll</span><span class="p">(</span><span class="mf">1.0</span><span class="n">f</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">Input</span><span class="o">::</span><span class="n">IsKeyPressed</span><span class="p">(</span><span class="n">TEA_KEY_S</span><span class="p">))</span>
+        <span class="p">{</span>
+            <span class="n">ProcessMouseScroll</span><span class="p">(</span><span class="o">-</span><span class="mf">1.0</span><span class="n">f</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="kt">void</span> <span class="n">SetFOV</span><span class="p">(</span><span class="kt">float</span> <span class="n">fov</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">m_fov</span> <span class="o">=</span> <span class="n">fov</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="kt">void</span> <span class="n">UpdateViewMatrix</span><span class="p">()</span>
+    <span class="p">{</span>
+        <span class="n">m_viewMatrix</span> <span class="o">=</span> <span class="n">glm</span><span class="o">::</span><span class="n">lookAt</span><span class="p">(</span><span class="n">m_eye</span><span class="p">,</span> <span class="n">m_lookAt</span><span class="p">,</span> <span class="n">m_upVector</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="kt">void</span> <span class="n">UpdateProjMatrix</span><span class="p">()</span>
+    <span class="p">{</span>
+        <span class="n">m_projMatrix</span> <span class="o">=</span> <span class="n">glm</span><span class="o">::</span><span class="n">perspective</span><span class="p">(</span><span class="n">glm</span><span class="o">::</span><span class="n">radians</span><span class="p">(</span><span class="n">m_fov</span><span class="p">),</span> <span class="p">(</span><span class="kt">float</span><span class="p">)</span> <span class="o">*</span><span class="n">m_width</span> <span class="o">/</span> <span class="o">*</span><span class="n">m_height</span><span class="p">,</span> <span class="mf">0.1</span><span class="n">f</span><span class="p">,</span> <span class="mf">200.0</span><span class="n">f</span> <span class="o">*</span> <span class="mi">20</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="kt">void</span> <span class="n">SetCameraView</span><span class="p">(</span><span class="n">glm</span><span class="o">::</span><span class="n">vec3</span> <span class="n">eye</span><span class="p">,</span> <span class="n">glm</span><span class="o">::</span><span class="n">vec3</span> <span class="n">lookat</span><span class="p">,</span> <span class="n">glm</span><span class="o">::</span><span class="n">vec3</span> <span class="n">up</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">m_eye</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">eye</span><span class="p">);</span>
+        <span class="n">m_lookAt</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">lookat</span><span class="p">);</span>
+        <span class="n">m_upVector</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">up</span><span class="p">);</span>
+        <span class="n">UpdateViewMatrix</span><span class="p">();</span>
+    <span class="p">}</span>
+    <span class="kt">void</span> <span class="n">ProcessMouseScroll</span><span class="p">(</span><span class="kt">float</span> <span class="n">yoffset</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">m_fov</span> <span class="o">-=</span> <span class="p">(</span><span class="kt">float</span><span class="p">)</span><span class="n">yoffset</span><span class="p">;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">m_fov</span> <span class="o">&lt;</span> <span class="mf">1.0</span><span class="n">f</span><span class="p">)</span>
+            <span class="n">m_fov</span> <span class="o">=</span> <span class="mf">1.0</span><span class="n">f</span><span class="p">;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">m_fov</span> <span class="o">&gt;</span> <span class="mf">45.0</span><span class="n">f</span><span class="p">)</span>
+            <span class="n">m_fov</span> <span class="o">=</span> <span class="mf">45.0</span><span class="n">f</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="nl">private:</span>
+    <span class="n">glm</span><span class="o">::</span><span class="n">mat4x4</span> <span class="n">m_viewMatrix</span><span class="p">;</span>
+    <span class="n">glm</span><span class="o">::</span><span class="n">mat4x4</span> <span class="n">m_projMatrix</span><span class="p">;</span>
+    <span class="n">glm</span><span class="o">::</span><span class="n">vec3</span><span class="o">&amp;</span> <span class="n">m_eye</span><span class="p">;</span>                <span class="c1">// Camera position in 3D</span>
+    <span class="n">glm</span><span class="o">::</span><span class="n">vec3</span><span class="o">&amp;</span> <span class="n">m_lookAt</span><span class="p">;</span>             <span class="c1">// Point that the camera is looking at</span>
+    <span class="n">glm</span><span class="o">::</span><span class="n">vec3</span><span class="o">&amp;</span> <span class="n">m_upVector</span><span class="p">;</span>           <span class="c1">// Orientation of the camera</span>
+    <span class="kt">int</span><span class="o">*</span> <span class="n">m_width</span><span class="p">;</span>
+    <span class="kt">int</span><span class="o">*</span> <span class="n">m_height</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">m_fov</span> <span class="o">=</span> <span class="mi">45</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">pan_speed</span> <span class="o">=</span> <span class="mf">.5</span><span class="n">f</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">m_yaw</span> <span class="o">=</span> <span class="mf">0.0</span><span class="n">f</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">m_pitch</span> <span class="o">=</span> <span class="mf">0.0</span><span class="n">f</span><span class="p">;</span>
+    <span class="kt">bool</span> <span class="n">firstMouseClick</span><span class="p">;</span>
+    <span class="kt">bool</span> <span class="n">firstRightMouseClick</span><span class="p">;</span>
+    <span class="n">glm</span><span class="o">::</span><span class="n">vec2</span> <span class="n">lastMousePosRightClick</span> <span class="o">=</span> <span class="n">glm</span><span class="o">::</span><span class="n">vec2</span><span class="p">(</span><span class="mf">0.0</span><span class="n">f</span><span class="p">,</span> <span class="mf">0.0</span><span class="n">f</span><span class="p">);</span>
+<span class="nl">private:</span>
+    <span class="kt">void</span> <span class="n">ArcBallCamera</span><span class="p">(</span><span class="kt">float</span> <span class="n">deltaX</span><span class="p">,</span> <span class="kt">float</span> <span class="n">deltaY</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">glm</span><span class="o">::</span><span class="n">vec4</span> <span class="n">position</span><span class="p">(</span><span class="n">GetEye</span><span class="p">().</span><span class="n">x</span><span class="p">,</span> <span class="n">GetEye</span><span class="p">().</span><span class="n">y</span><span class="p">,</span> <span class="n">GetEye</span><span class="p">().</span><span class="n">z</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+        <span class="n">glm</span><span class="o">::</span><span class="n">vec4</span> <span class="n">pivot</span><span class="p">(</span><span class="n">GetLookAt</span><span class="p">().</span><span class="n">x</span><span class="p">,</span> <span class="n">GetLookAt</span><span class="p">().</span><span class="n">y</span><span class="p">,</span> <span class="n">GetLookAt</span><span class="p">().</span><span class="n">z</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+        <span class="kt">float</span> <span class="n">deltaAngleX</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">M_PI</span> <span class="o">/</span> <span class="o">*</span><span class="n">m_width</span><span class="p">);</span>
+        <span class="kt">float</span> <span class="n">deltaAngleY</span> <span class="o">=</span> <span class="p">(</span><span class="n">M_PI</span> <span class="o">/</span> <span class="o">*</span><span class="n">m_height</span><span class="p">);</span>
+        <span class="kt">float</span> <span class="n">xAngle</span> <span class="o">=</span> <span class="n">deltaX</span> <span class="o">*</span> <span class="n">deltaAngleX</span><span class="p">;</span>
+        <span class="kt">float</span> <span class="n">yAngle</span> <span class="o">=</span> <span class="n">deltaY</span> <span class="o">*</span> <span class="n">deltaAngleY</span><span class="p">;</span>
+        <span class="kt">float</span> <span class="n">cosAngle</span> <span class="o">=</span> <span class="n">glm</span><span class="o">::</span><span class="n">dot</span><span class="p">(</span><span class="n">GetViewDir</span><span class="p">(),</span> <span class="n">m_upVector</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">cosAngle</span> <span class="o">*</span> <span class="n">glm</span><span class="o">::</span><span class="n">sign</span><span class="p">(</span><span class="n">yAngle</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">0.99</span><span class="n">f</span><span class="p">)</span>
+            <span class="n">yAngle</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="n">glm</span><span class="o">::</span><span class="n">mat4x4</span> <span class="n">rotationMatrixX</span><span class="p">(</span><span class="mf">1.0</span><span class="n">f</span><span class="p">);</span>
+        <span class="n">rotationMatrixX</span> <span class="o">=</span> <span class="n">glm</span><span class="o">::</span><span class="n">rotate</span><span class="p">(</span><span class="n">rotationMatrixX</span><span class="p">,</span> <span class="n">xAngle</span><span class="p">,</span> <span class="n">m_upVector</span><span class="p">);</span>
+        <span class="n">position</span> <span class="o">=</span> <span class="p">(</span><span class="n">rotationMatrixX</span> <span class="o">*</span> <span class="p">(</span><span class="n">position</span> <span class="o">-</span> <span class="n">pivot</span><span class="p">))</span> <span class="o">+</span> <span class="n">pivot</span><span class="p">;</span>
+        <span class="n">glm</span><span class="o">::</span><span class="n">mat4x4</span> <span class="n">rotationMatrixY</span><span class="p">(</span><span class="mf">1.0</span><span class="n">f</span><span class="p">);</span>
+        <span class="n">rotationMatrixY</span> <span class="o">=</span> <span class="n">glm</span><span class="o">::</span><span class="n">rotate</span><span class="p">(</span><span class="n">rotationMatrixY</span><span class="p">,</span> <span class="n">yAngle</span><span class="p">,</span> <span class="n">GetRightVector</span><span class="p">());</span>
+        <span class="n">glm</span><span class="o">::</span><span class="n">vec3</span> <span class="n">finalPosition</span> <span class="o">=</span> <span class="p">(</span><span class="n">rotationMatrixY</span> <span class="o">*</span> <span class="p">(</span><span class="n">position</span> <span class="o">-</span> <span class="n">pivot</span><span class="p">))</span> <span class="o">+</span> <span class="n">pivot</span><span class="p">;</span>
+        <span class="n">SetCameraView</span><span class="p">(</span><span class="n">finalPosition</span><span class="p">,</span> <span class="n">GetLookAt</span><span class="p">(),</span> <span class="n">m_upVector</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="kt">void</span> <span class="n">PanCamera</span><span class="p">(</span><span class="kt">float</span> <span class="n">deltaX</span><span class="p">,</span> <span class="kt">float</span> <span class="n">deltaY</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">deltaX</span> <span class="o">*=</span> <span class="mf">0.05</span><span class="n">f</span><span class="p">;</span>
+        <span class="n">deltaY</span> <span class="o">*=</span> <span class="mf">0.05</span><span class="n">f</span><span class="p">;</span>
+        <span class="n">glm</span><span class="o">::</span><span class="n">vec3</span> <span class="n">cameraFront</span> <span class="o">=</span> <span class="n">glm</span><span class="o">::</span><span class="n">normalize</span><span class="p">(</span><span class="n">m_lookAt</span> <span class="o">-</span> <span class="n">m_eye</span><span class="p">);</span>
+        <span class="n">glm</span><span class="o">::</span><span class="n">vec3</span> <span class="n">right</span> <span class="o">=</span> <span class="n">glm</span><span class="o">::</span><span class="n">normalize</span><span class="p">(</span><span class="n">glm</span><span class="o">::</span><span class="n">cross</span><span class="p">(</span><span class="n">cameraFront</span><span class="p">,</span> <span class="n">m_upVector</span><span class="p">));</span>
+        <span class="n">glm</span><span class="o">::</span><span class="n">vec3</span> <span class="n">up</span> <span class="o">=</span> <span class="n">glm</span><span class="o">::</span><span class="n">normalize</span><span class="p">(</span><span class="n">m_upVector</span><span class="p">);</span>
+        <span class="n">m_eye</span> <span class="o">-=</span> <span class="n">deltaX</span> <span class="o">*</span> <span class="n">right</span> <span class="o">+</span> <span class="n">deltaY</span> <span class="o">*</span> <span class="n">up</span><span class="p">;</span>
+        <span class="n">m_lookAt</span> <span class="o">-=</span> <span class="n">deltaX</span> <span class="o">*</span> <span class="n">right</span> <span class="o">+</span> <span class="n">deltaY</span> <span class="o">*</span> <span class="n">up</span><span class="p">;</span>
+        <span class="n">UpdateViewMatrix</span><span class="p">();</span>
+    <span class="p">}</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<p>If you want to try how arcball camera works, you can check out my ShapeGenerator repository from <a href="https://github.com/uysalaltas/ShapeGenerator">here</a>. You can also contribute the repository. Also you should definetely check out the resuorces below for understanding Arcball camera more.</p>
+
+<ul>
+  <li>Arcball Camera Article. <a href="https://www.talisman.org/~erlkonig/misc/shoemake92-arcball.pdf">Link</a></li>
+  <li>Quaternions ans Gimbal Lock. <a href="https://www.youtube.com/watch?v=zjMuIxRvygQ&amp;ab_channel=3Blue1Brown">Link</a></li>
+</ul>
+:ET
